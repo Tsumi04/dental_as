@@ -20,6 +20,7 @@ import {
 } from "../ui/select";
 import { Button } from "../ui/button";
 import { formatPhoneNumber } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface AddDoctorDialogProps {
   isOpen: boolean;
@@ -44,7 +45,19 @@ function AddDoctorDialog({ isOpen, onClose }: AddDoctorDialogProps) {
   };
 
   const handleSave = () => {
-    createDoctorMutation.mutate({ ...newDoctor }, { onSuccess: handleClose });
+    createDoctorMutation.mutate(
+      { ...newDoctor },
+      {
+        onSuccess: () => {
+          toast.success("Doctor added successfully");
+          handleClose();
+        },
+        onError: (error: any) => {
+          const errorMessage = error?.message || "Failed to create doctor";
+          toast.error(errorMessage);
+        },
+      }
+    );
   };
 
   const handleClose = () => {

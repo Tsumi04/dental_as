@@ -9,36 +9,50 @@ const plans = [
     price: "$0",
     cadence: "Always free",
     badge: "Active",
-    features: ["Unlimited appointment booking", "Basic text chat support", "Appointment reminders"],
+    features: [
+      "Unlimited appointment booking",
+      "Basic text chat support",
+      "Appointment reminders",
+    ],
   },
   {
     name: "AI Basic",
     price: "$9",
     cadence: "Only billed monthly",
     subtitle: "AI consultations + appointment booking",
-    features: ["Everything in Free", "10 AI voice calls per month", "AI dental guidance", "Priority support"],
+    features: [
+      "Everything in Free",
+      "10 AI voice calls per month",
+      "AI dental guidance",
+      "Priority support",
+    ],
   },
   {
     name: "AI Pro",
     price: "$19",
     cadence: "Only billed monthly",
     subtitle: "Unlimited AI consultations",
-    features: ["Everything in Basic", "Unlimited AI voice calls", "Personalized care plans", "Detailed health reports"],
+    features: [
+      "Everything in Basic",
+      "Unlimited AI voice calls",
+      "Personalized care plans",
+      "Detailed health reports",
+    ],
   },
 ];
 
 export default async function ProPage() {
-  let userId;
   try {
-    const authResult = await auth();
-    userId = authResult?.userId;
+    const { userId } = await auth();
+
+    if (!userId) {
+      redirect("/");
+    }
   } catch (error) {
     console.error("Clerk API error:", error);
     // If Clerk API fails, redirect to home
     redirect("/");
-    return null;
   }
-  if (!userId) redirect("/");
 
   return (
     <main className="min-h-screen bg-[#0d0907] text-[#f4e8dc]">

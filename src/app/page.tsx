@@ -13,11 +13,10 @@ export default async function Home() {
   try {
     user = await currentUser();
   } catch (error) {
-    // If Clerk API fails, continue without redirecting
-    console.error("Clerk API error in Home:", error);
+    console.error("Clerk API error:", error);
+    // If Clerk API fails, continue without user (show landing page)
     user = null;
   }
-
   if (user) redirect("/dashboard");
   return (
     <div className="min-h-screen bg-background">

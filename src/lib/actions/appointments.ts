@@ -1,8 +1,35 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "../prisma";
+import { AppointmentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+
+import { prisma } from "../prisma";
+
+// Helper function to check if error is a database connection error
+function isDatabaseConnectionError(error: any): boolean {
+  return (
+    error?.code === "P1001" ||
+    error?.message?.includes("Can't reach database server") ||
+    error?.message?.includes("connect ECONNREFUSED") ||
+    error?.message?.includes("timeout") ||
+    error?.message?.includes("Connection pool timeout")
+  );
+}
+
+function transformAppointment(appointment: any) {
+  return {
+    ...appointment,
+    patientName: `${appointment.user.firstName || ""} ${appointment.user.lastName || ""}`.trim(),
+    patientEmail: appointment.user.email,
+    doctorName: appointment.doctor.name,
+    doctorImageUrl: appointment.doctor.imageUrl || "",
+    date:
+      appointment.date instanceof Date
+        ? appointment.date.toISOString().split("T")[0]
+        : appointment.date,
+  };
+}
 
 export async function getAppointments() {
   try {
@@ -15,21 +42,20 @@ export async function getAppointments() {
             email: true,
           },
         },
-        doctor: {
-          select: {
-            name: true,
-            imageUrl: true,
-          },
-        },
+        doctor: { select: { name: true, imageUrl: true } },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     });
-    return appointments;
-  } catch (error) {
-    console.log("Error fetching appointments:", error);
-    throw new Error("Failed to fetch appointments");
+
+    return appointments.map(transformAppointment);
+  } catch (error: any) {
+    console.error("Error fetching appointments:", error);
+    if (isDatabaseConnectionError(error)) {
+      console.error("Database connection error - returning empty array");
+      return [];
+    }
+    console.error("Unexpected error fetching appointments, returning empty array");
+    return [];
   }
 }
 
@@ -37,50 +63,129 @@ export async function getUserAppointments() {
   try {
     const { userId } = await auth();
     if (!userId) {
+      console.warn("No user ID found in auth");
       return [];
     }
 
-    const dbUser = await prisma.user.findUnique({
-      where: { clerkID: userId },
-    });
-
-    if (!dbUser) {
+    let user;
+    try {
+      user = await prisma.user.findUnique({ where: { clerkID: userId } });
+    } catch (dbError: any) {
+      console.error("Database connection error:", dbError);
       return [];
     }
 
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        userId: dbUser.id,
-      },
-      include: {
-        doctor: {
-          select: {
-            name: true,
-            imageUrl: true,
-            speciality: true,
-            email: true,
-            phone: true,
+    if (!user) {
+      console.warn("User not found for clerkID:", userId);
+      return [];
+    }
+
+    let appointments;
+    try {
+      appointments = await prisma.appointment.findMany({
+        where: { userId: user.id },
+        include: {
+          user: { select: { firstName: true, lastName: true, email: true } },
+          doctor: {
+            select: {
+              name: true,
+              imageUrl: true,
+              speciality: true,
+              email: true,
+              phone: true,
+            },
           },
         },
-      },
-      orderBy: {
-        date: "desc",
-      },
-    });
-
-    // Filter out appointments with missing doctor data and log for debugging
-    const validAppointments = appointments.filter((appointment) => {
-      if (!appointment.doctor) {
-        console.warn(`Appointment ${appointment.id} has no doctor relation (doctorId: ${appointment.doctorId})`);
-        return false;
+        orderBy: [{ date: "asc" }, { time: "asc" }],
+      });
+    } catch (dbError: any) {
+      if (isDatabaseConnectionError(dbError)) {
+        console.error(
+          "Database connection error - server unreachable:",
+          dbError.message,
+        );
+        return [];
       }
-      return true;
-    });
+      console.error("Database error fetching appointments:", dbError);
+      return [];
+    }
 
-    return validAppointments;
-  } catch (error) {
-    console.log("Error fetching user appointments:", error);
-    throw new Error("Failed to fetch user appointments");
+    return appointments.map(transformAppointment);
+  } catch (error: any) {
+    console.error("Error fetching user appointments:", error);
+    if (isDatabaseConnectionError(error)) {
+      console.error("Database connection error - returning empty array");
+      return [];
+    }
+    return [];
+  }
+}
+
+export async function getUserAppointmentStats() {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { totalAppointments: 0, completedAppointments: 0 };
+    }
+
+    let user;
+    try {
+      user = await prisma.user.findUnique({ where: { clerkID: userId } });
+    } catch (dbError: any) {
+      if (isDatabaseConnectionError(dbError)) {
+        console.error(
+          "Database connection error - server unreachable:",
+          dbError.message,
+        );
+        return { totalAppointments: 0, completedAppointments: 0 };
+      }
+      console.error("Database error finding user:", dbError);
+      return { totalAppointments: 0, completedAppointments: 0 };
+    }
+
+    if (!user) {
+      return { totalAppointments: 0, completedAppointments: 0 };
+    }
+
+    let totalCount, completedCount;
+    try {
+      [totalCount, completedCount] = await Promise.all([
+        prisma.appointment.count({
+          where: { userId: user.id },
+        }),
+        prisma.appointment.count({
+          where: {
+            userId: user.id,
+            status: "COMPLETED",
+          },
+        }),
+      ]);
+    } catch (dbError: any) {
+      if (isDatabaseConnectionError(dbError)) {
+        console.error(
+          "Database connection error - server unreachable:",
+          dbError.message,
+        );
+        return { totalAppointments: 0, completedAppointments: 0 };
+      }
+      console.error("Database error fetching stats:", dbError);
+      return { totalAppointments: 0, completedAppointments: 0 };
+    }
+
+    return {
+      totalAppointments: totalCount,
+      completedAppointments: completedCount,
+    };
+  } catch (error: any) {
+    if (isDatabaseConnectionError(error)) {
+      console.error(
+        "Database connection error - server unreachable:",
+        error.message,
+      );
+      return { totalAppointments: 0, completedAppointments: 0 };
+    }
+    console.error("Error fetching user appointment stats:", error);
+    return { totalAppointments: 0, completedAppointments: 0 };
   }
 }
 
@@ -98,7 +203,19 @@ export async function getBookedTimeSlots(doctorId: string, date: string) {
     });
 
     return appointments.map((appointment) => appointment.time);
-  } catch (error) {
+  } catch (error: any) {
+    if (
+      error?.code === "P1001" ||
+      error?.message?.includes("Can't reach database server") ||
+      error?.message?.includes("connect ECONNREFUSED") ||
+      error?.message?.includes("timeout")
+    ) {
+      console.error(
+        "Database connection error - server unreachable:",
+        error.message,
+      );
+      return [];
+    }
     console.error("Error fetching booked time slots:", error);
     return [];
   }
@@ -120,44 +237,101 @@ export async function bookAppointment(input: BookAppointmentInput) {
       throw new Error("Doctor, date, and time are required");
     }
 
-    const user = await prisma.user.findUnique({ where: { clerkID: userId } });
-    if (!user) throw new Error("User not found. Please ensure your account is properly set up.");
+    let user;
+    try {
+      user = await prisma.user.findUnique({ where: { clerkID: userId } });
+    } catch (dbError: any) {
+      if (isDatabaseConnectionError(dbError)) {
+        console.error(
+          "Database connection error - server unreachable:",
+          dbError.message,
+        );
+        throw new Error("Database connection error. Please try again later.");
+      }
+      console.error("Database connection error:", dbError);
+      throw new Error("Database connection error. Please try again later.");
+    }
 
-    const appointment = await prisma.appointment.create({
-      data: {
-        userId: user.id,
-        doctorId: input.doctorId,
-        date: new Date(input.date),
-        time: input.time,
-        reason: input.reason || "General consultation",
-        status: "CONFIRMED",
-      },
-      include: {
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
+    if (!user)
+      throw new Error(
+        "User not found. Please ensure your account is properly set up.",
+      );
+
+    let appointment;
+    try {
+      appointment = await prisma.appointment.create({
+        data: {
+          userId: user.id,
+          doctorId: input.doctorId,
+          date: new Date(input.date),
+          time: input.time,
+          reason: input.reason || "General consultation",
+          status: "CONFIRMED",
         },
-        doctor: { select: { name: true, imageUrl: true, speciality: true } },
-      },
-    });
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          doctor: { select: { name: true, imageUrl: true } },
+        },
+      });
+    } catch (dbError: any) {
+      if (isDatabaseConnectionError(dbError)) {
+        console.error(
+          "Database connection error - server unreachable:",
+          dbError.message,
+        );
+        throw new Error("Database connection error. Please try again later.");
+      }
+      console.error("Database error creating appointment:", dbError);
+      throw new Error("Failed to create appointment. Please try again later.");
+    }
 
+    // Revalidate relevant pages so UI reflects the new appointment
     revalidatePath("/appointments");
     revalidatePath("/dashboard");
 
-    return {
-      ...appointment,
-      patientName: `${appointment.user.firstName || ""} ${appointment.user.lastName || ""}`.trim(),
-      patientEmail: appointment.user.email,
-      doctorName: appointment.doctor.name,
-      doctorImageUrl: appointment.doctor.imageUrl || "",
-      doctorSpeciality: appointment.doctor.speciality || "",
-      date: appointment.date.toISOString().split("T")[0],
-    };
-  } catch (error) {
+    return transformAppointment(appointment);
+  } catch (error: any) {
     console.error("Error booking appointment:", error);
+    if (error.message) {
+      throw error;
+    }
     throw new Error("Failed to book appointment. Please try again later.");
   }
 }
+
+export async function updateAppointmentStatus(input: {
+  id: string;
+  status: AppointmentStatus;
+}) {
+  try {
+    const appointment = await prisma.appointment.update({
+      where: { id: input.id },
+      data: { status: input.status },
+    });
+
+    return appointment;
+  } catch (error: any) {
+    if (
+      error?.code === "P1001" ||
+      error?.message?.includes("Can't reach database server") ||
+      error?.message?.includes("connect ECONNREFUSED") ||
+      error?.message?.includes("timeout")
+    ) {
+      console.error(
+        "Database connection error - server unreachable:",
+        error.message,
+      );
+      throw new Error("Database connection error. Please try again later.");
+    }
+    console.error("Error updating appointment:", error);
+    throw new Error("Failed to update appointment");
+  }
+}
+
+

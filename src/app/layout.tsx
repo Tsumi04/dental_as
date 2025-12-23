@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import UserSync from "../components/UserSync";
 import "./globals.css";
 import TanStackProvider from "../components/providers/TanStackProvider";
+import { Toaster } from "../components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,7 +19,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DentalMine - AI-Powered Dental Assistant",
   description:
-    "Get instant dental advice through voice calls with our AI assistant. Avaiable 24/7.",
+    "Get instant dental advice through voice calls with our AI assistant. Available 24/7.",
 };
 
 export default function RootLayout({
@@ -44,6 +45,7 @@ export default function RootLayout({
             className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           >
             <UserSync />
+            <Toaster />
             {children}
           </body>
         </html>

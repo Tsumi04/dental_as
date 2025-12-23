@@ -7,6 +7,7 @@ import { useGetDoctors } from "../../hooks/use-doctors";
 import { useGetAppointments } from "../../hooks/use-appointments";
 import AdminStats from "../../components/admin/AdminStats";
 import DoctorsManagement from "@/components/admin/DoctorsManagement";
+import RecentAppointments from "@/components/admin/RecentAppointments";
 
 function LoadingUI() {
   return (
@@ -124,7 +125,12 @@ function AdminDashboardClient() {
           totalAppointments={stats.totalAppointments}
           completedAppointments={stats.completedAppointments}
         />
-        <DoctorsManagement />
+        <div className="mt-8">
+          <RecentAppointments />
+        </div>
+        <div className="mt-8">
+          <DoctorsManagement />
+        </div>
       </div>
     </div>
   );
