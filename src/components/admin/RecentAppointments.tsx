@@ -17,6 +17,7 @@ import { AppointmentStatus } from "@prisma/client";
 import { updateAppointmentStatus } from "@/lib/actions/appointments";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const statusOrder: AppointmentStatus[] = [
   "PENDING",
@@ -55,6 +56,7 @@ function getStatusVariant(
 export default function RecentAppointments() {
   const { data: appointments = [], isLoading } = useGetAppointments();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const updateStatusMutation = useMutation({
     mutationFn: updateAppointmentStatus,
@@ -109,60 +111,118 @@ export default function RecentAppointments() {
             <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>No recent appointments</p>
           </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Patient</TableHead>
-                <TableHead>Doctor</TableHead>
-                <TableHead>Date & Time</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {appointments.map((appointment: any) => (
-                <TableRow key={appointment.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">
-                        {appointment.patientName || "Unknown"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.patientEmail}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <p className="font-medium">{appointment.doctorName}</p>
-                  </TableCell>
-                  <TableCell>
-                    <p>{formatDateTime(appointment.date, appointment.time)}</p>
-                  </TableCell>
-                  <TableCell>
-                    <p>{appointment.reason || "General Consultation"}</p>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={getStatusVariant(appointment.status)}
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() =>
-                        handleStatusClick(appointment.id, appointment.status)
-                      }
-                    >
-                      {formatStatus(appointment.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-sm text-muted-foreground">
-                      Click status to toggle
+        ) : isMobile ? (
+          // Mobile card layout
+          <div className="space-y-4">
+            {appointments.map((appointment: any) => (
+              <div
+                key={appointment.id}
+                className="p-4 border rounded-lg space-y-3 bg-card"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">
+                      {appointment.patientName || "Unknown"}
                     </p>
-                  </TableCell>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {appointment.patientEmail}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={getStatusVariant(appointment.status)}
+                    className="cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+                    onClick={() =>
+                      handleStatusClick(appointment.id, appointment.status)
+                    }
+                  >
+                    {formatStatus(appointment.status)}
+                  </Badge>
+                </div>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground min-w-[80px]">
+                      Doctor:
+                    </span>
+                    <span className="font-medium">{appointment.doctorName}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground min-w-[80px]">
+                      Date & Time:
+                    </span>
+                    <span>{formatDateTime(appointment.date, appointment.time)}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground min-w-[80px]">
+                      Reason:
+                    </span>
+                    <span className="flex-1">
+                      {appointment.reason || "General Consultation"}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground pt-2 border-t">
+                  Tap status badge to toggle
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Desktop table layout
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Patient</TableHead>
+                  <TableHead>Doctor</TableHead>
+                  <TableHead>Date & Time</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {appointments.map((appointment: any) => (
+                  <TableRow key={appointment.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">
+                          {appointment.patientName || "Unknown"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {appointment.patientEmail}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="font-medium">{appointment.doctorName}</p>
+                    </TableCell>
+                    <TableCell>
+                      <p>{formatDateTime(appointment.date, appointment.time)}</p>
+                    </TableCell>
+                    <TableCell>
+                      <p>{appointment.reason || "General Consultation"}</p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={getStatusVariant(appointment.status)}
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() =>
+                          handleStatusClick(appointment.id, appointment.status)
+                        }
+                      >
+                        {formatStatus(appointment.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm text-muted-foreground">
+                        Click status to toggle
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

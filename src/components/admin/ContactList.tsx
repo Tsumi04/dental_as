@@ -53,11 +53,11 @@ export default function ContactList({
   return (
     <Card className="border-border/50">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5" />
+        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+          <MessageSquare className="w-4 sm:w-5 h-4 sm:h-5" />
           Contact Messages
         </CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           Select a user to view and respond to their messages
         </p>
       </CardHeader>
@@ -73,27 +73,27 @@ export default function ContactList({
             <p>No messages yet</p>
           </div>
         ) : (
-          <ScrollArea className="h-[600px]">
-            <div className="space-y-2 pr-4">
+          <ScrollArea className="h-[400px] sm:h-[600px]">
+            <div className="space-y-2 pr-2 sm:pr-4">
               {contacts.map((contact: Contact) => (
                 <div
                   key={contact.id}
                   onClick={() => onContactSelect(contact.id)}
                   className={cn(
-                    "flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors hover:bg-accent/50",
+                    "flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border cursor-pointer transition-colors hover:bg-accent/50",
                     selectedContactId === contact.id &&
                       "bg-accent border-primary/50",
                   )}
                 >
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
                     <AvatarImage src="" />
-                    <AvatarFallback className="bg-primary/10 text-primary">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm">
                       {getInitials(contact.userName)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="font-medium text-sm truncate">
+                      <p className="font-medium text-xs sm:text-sm truncate">
                         {contact.userName}
                       </p>
                       {contact.messageCount > 0 && (
@@ -103,7 +103,7 @@ export default function ContactList({
                       )}
                     </div>
                     {contact.latestMessage && (
-                      <p className="text-sm text-muted-foreground truncate mb-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate mb-1">
                         {contact.latestMessage}
                       </p>
                     )}

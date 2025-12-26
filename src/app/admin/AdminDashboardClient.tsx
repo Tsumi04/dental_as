@@ -122,27 +122,27 @@ function AdminDashboardClient() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-6 py-8 pt-24">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 pt-20 sm:pt-24">
         {/* ADMIN WELCOME SECTION */}
-        <div className="mb-12 flex items-center justify-between bg-gradient-to-br from-primary/10 via-primary/5 to-background rounded-3xl p-8 border border-primary/20">
-          <div className="space-y-4">
+        <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 bg-gradient-to-br from-primary/10 via-primary/5 to-background rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-primary/20">
+          <div className="space-y-3 sm:space-y-4 flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
               <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-primary">
+              <span className="text-xs sm:text-sm font-medium text-primary">
                 Admin Dashboard
               </span>
             </div>
             <div>
-              <h1 className="text-4xl font-bold mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">
                 Welcome back, {user?.firstName || "Admin"}!
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 Manage doctors, oversee appointments, and monitor your dental
                 practice performance.
               </p>
             </div>
           </div>
-          <div className="hidden lg:block">
+          <div className="hidden lg:block shrink-0">
             <div className="w-32 h-32 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
               <SettingsIcon className="w-16 h-16 text-primary" />
             </div>
@@ -155,13 +155,13 @@ function AdminDashboardClient() {
           totalAppointments={stats.totalAppointments}
           completedAppointments={stats.completedAppointments}
         />
-        <div className="mt-8">
+        <div className="mt-6 sm:mt-8">
           <RecentAppointments />
         </div>
-        <div className="mt-8">
+        <div className="mt-6 sm:mt-8">
           <DoctorsManagement />
         </div>
-        <div className="mt-8">
+        <div className="mt-6 sm:mt-8">
           <ContactList
             selectedContactId={selectedContactId}
             onContactSelect={handleContactSelect}
